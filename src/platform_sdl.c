@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "icon.inc"
+
 u8 g_key_down[256];
 u8 g_mouse_down[6];
 b32 g_quit;
@@ -73,8 +75,11 @@ b32 platform_init(const char *title, i32 w, i32 h, KeyCallback key, MouseCallbac
     s_perf_freq = SDL_GetPerformanceFrequency();
     s_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h, SDL_WINDOW_RESIZABLE);
     if (!s_window) return 0;
-    SDL_Surface *icon = NULL;
-    (void)icon;
+    SDL_Surface *icon = SDL_CreateRGBSurfaceWithFormatFrom((void *)k_icon, 64, 64, 32, 64 * 4, SDL_PIXELFORMAT_ARGB8888);
+    if (icon) {
+        SDL_SetWindowIcon(s_window, icon);
+        SDL_FreeSurface(icon);
+    }
     s_renderer = SDL_CreateRenderer(s_window, -1, SDL_RENDERER_ACCELERATED);
     if (!s_renderer) s_renderer = SDL_CreateRenderer(s_window, -1, SDL_RENDERER_SOFTWARE);
     if (!s_renderer) return 0;

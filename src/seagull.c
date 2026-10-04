@@ -158,7 +158,7 @@ static b32 ensure_path(Seagull *s, V2u cell) {
     s->has_path = 0;
     if (!g_path_fn) return 0;
     u32 n = 0;
-    if (!g_path_fn(pc, cell, s->path, &n, 0x400, g_path_user) || n == 0) return 0;
+    if (!g_path_fn(pc, cell, (V2u *)((u8 *)s + 0x64), &n, 0x400, g_path_user) || n == 0) return 0;
     s->path_count = n;
     s->path_idx = 0;
     s->path_goal = cell;

@@ -8,7 +8,7 @@ static const i32 k_menu_scale = 4;       // 0x140029044
 static const i32 k_menu_margin = 0x32;   // 0x140029048
 static const i32 k_menu_border = 3;      // 0x14002904c
 static const i32 k_sel_thick = 2;        // 0x140029050
-static const i32 k_big_scale = 3;        // 0x140029070
+// 0x140029070 (tutorial image scale 3) is used by input.c and render_world.c
 static const i32 k_inv_slot = 0x30;      // 0x140029074
 static const i32 k_inv_x = 10;           // 0x140029078
 static const i32 k_inv_y = 0x14;         // 0x14002907c
