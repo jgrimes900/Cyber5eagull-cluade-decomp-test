@@ -131,6 +131,23 @@ static void dump_frame(void);
 static i32 WINAPI u_UpdateWindow(u64 h) {
     (void)h;
     if (script_frame_has(&script, frame, 'D')) dump_frame();
+    if (script_frame_has(&script, frame, 'S')) {
+        char p[512]; snprintf(p, sizeof p, "%s/state_%05d.txt", outdir, frame);
+        FILE *sf = fopen(p, "w");
+        u64 *rng = (u64 *)0x140029aa8;
+        fprintf(sf, "rng %016llx %016llx %016llx %016llx\n", (unsigned long long)rng[0], (unsigned long long)rng[1], (unsigned long long)rng[2], (unsigned long long)rng[3]);
+        u8 *bees = *(u8 **)0x140029ac8; u32 nb = *(u32 *)0x1400299ac;
+        for (u32 i = 0; i < nb; i++) {
+            u8 *n = bees + i * 0x40;
+            fprintf(sf, "nest %u %u t=%.6f n=%u", *(u32 *)n, *(u32 *)(n + 4), *(float *)(n + 8), *(u32 *)(n + 12));
+            for (u32 k = 0; k < *(u32 *)(n + 12) && k < 3; k++) { u8 *q = n + 16 + k * 16; fprintf(sf, " [%.4f %.4f %u %.3f]", *(float *)q, *(float *)(q + 4), q[8], *(float *)(q + 12)); }
+            fprintf(sf, "\n");
+        }
+        u8 *g = *(u8 **)0x1400291e0; u32 ng = *(u32 *)0x1400291e8;
+        for (u32 i = 0; i < ng; i++) { u8 *q = g + i * 0x2080; fprintf(sf, "gull %.6f %.6f st=%u\n", *(float *)q, *(float *)(q + 4), q[0x34]); }
+        fprintf(sf, "orders %u pickups %u\n", *(u32 *)0x140029200, *(u32 *)0x1400eaa18);
+        fclose(sf);
+    }
     if (frame == 0 && getenv("ORACLE_MEMDUMP")) {
         FILE *mf = fopen(getenv("ORACLE_MEMDUMP"), "wb");
         if (mf) { fwrite((void *)0x140029000, 1, 0x1c3000 - 0x29000, mf); fclose(mf); }

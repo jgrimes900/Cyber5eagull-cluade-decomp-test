@@ -93,7 +93,7 @@ const Image *build_tooltip(u8 id) {
 }
 
 static const Image *item_tooltip(u32 item) {
-    static const u32 tab[14] = {0x1400eb840, 0x1400eb7a0, 0x1400eb890, 0x1400eb7b0, 0x1400eb850,
+    static const u64 tab[14] = {0x1400eb840, 0x1400eb7a0, 0x1400eb890, 0x1400eb7b0, 0x1400eb850,
                                 0x1400eb780, 0x1400eb750, 0x1400eb7e0, 0x1400eb800, 0x1400eb880,
                                 0x1400eb8b0, 0x1400eb870, 0x1400eb830, 0x1400eb7c0};
     return item < 14 ? TOOLTIP(tab[item]) : NULL;

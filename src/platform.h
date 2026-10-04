@@ -14,6 +14,8 @@ enum {
     VK_SPACE = 0x20, VK_LEFT = 0x25, VK_UP = 0x26, VK_RIGHT = 0x27, VK_DOWN = 0x28, VK_DELETE = 0x2e,
 };
 
+extern u32 *g_backbuffer;        // 0x1400296c8 (0xAARRGGBB, top-down)
+extern i32 g_bb_w, g_bb_h;        // 0x1400296d0
 extern u8 g_key_down[256];        // 0x140029700, indexed by virtual-key code
 extern u8 g_mouse_down[6];        // 0x140029800 (index 1..5)
 extern b32 g_quit;                // 0x1400296d8

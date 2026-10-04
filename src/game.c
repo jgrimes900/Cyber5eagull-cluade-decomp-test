@@ -1,5 +1,6 @@
 // Game setup, the per-frame simulation of buildings, and the main loop.
 #include "game.h"
+#include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // Global game / UI state
@@ -21,15 +22,14 @@ V2u g_start;
 u32 g_paid[0x10000];
 u32 g_world_seed;  // 0x14002a9e0
 
-DARRAY(Home) g_homes;
-DARRAY(u32) g_home_flags;
-DARRAY(u32) g_items;
-DARRAY(u8) g_inv_rows;
+HomeArray g_homes;
+U32Array g_home_flags;
+U8Array g_inv_rows;
 
 MenuEntry g_menu[12] = {{0, 10}, {0, 14}, {0, 16}, {0, 17}, {0, 18}, {0, 11},
                         {0, 12}, {0, 13}, {0, 19}, {1, 0},  {0, 20}, {0, 21}};
 u8 g_palette_ids[22] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21};
-DARRAY(const Sprite *) g_palette_sprites;
+SpritePtrArray g_palette_sprites;
 u8 g_selected_id;
 i32 g_palette_index;
 u32 g_palette_open;
@@ -53,7 +53,7 @@ V2i g_picker_anchor;
 i32 g_picker_selected = -1;
 Entity *g_picker_entity;
 u64 g_picker_serial;
-DARRAY(const Sprite *) g_picker_icons;
+SpritePtrArray g_picker_icons;
 PickerFn g_picker_fn;
 
 const Sprite *g_tile_sprites[9];
@@ -66,7 +66,7 @@ static Recipe s_recipe_plate, s_recipe_wire, s_recipe_gear, s_recipe_circuit, s_
     s_recipe_cyber;
 RecipeBook g_recipes_conveyor, g_recipes_furnace, g_recipes_machine, g_recipes_assembler;
 
-static Recipe make_recipe(u32 n, const u8 *items, const u32 *counts, u8 out, u32 out_n, f32 time, u32 icon) {
+static Recipe make_recipe(u32 n, const u8 *items, const u32 *counts, u8 out, u32 out_n, f32 time, u64 icon) {
     Recipe r;
     memset(&r, 0, sizeof r);
     r.n_in = n;
@@ -115,7 +115,7 @@ static void inventory_init(void) {
     g_inv_rows.count = 0;
     for (u32 i = 0; i < 14; i++) da_push(&g_inv_rows, (u8)0xff, 1);
     g_selected_item = ITEM_NONE;
-    static const u32 k_icons[14] = {0x1400eb020, 0x1400eb040, 0x1400eb060, 0x1400eb080, 0x1400eb0a0,
+    static const u64 k_icons[14] = {0x1400eb020, 0x1400eb040, 0x1400eb060, 0x1400eb080, 0x1400eb0a0,
                                     0x1400eb0c0, 0x1400eb0e0, 0x1400eb100, 0x1400eb120, 0x1400eb140,
                                     0x1400eb160, 0x1400eb1a0, 0x1400eb1c0, 0x1400eb200};
     for (u32 i = 0; i < 14; i++) g_item_sprites[i] = SPR(k_icons[i]);
@@ -428,7 +428,7 @@ b32 game_init(void) {
     world_alloc();
     for (int i = 0; i < 4; i++) g_rng.s[i] = rdrand64();
     g_entity_pool.arena = &g_arena;
-    static const u32 k_tiles[9] = {0x1400eaa20, 0x1400eaa40, 0x1400eaa60, 0x1400eaa80, 0x1400eaaa0,
+    static const u64 k_tiles[9] = {0x1400eaa20, 0x1400eaa40, 0x1400eaa60, 0x1400eaa80, 0x1400eaaa0,
                                    0x1400eaac0, 0x1400eaae0, 0x1400eab00, 0x1400eab20};
     for (int i = 0; i < 9; i++) g_tile_sprites[i] = SPR(k_tiles[i]);
     g_free_slots.arena = &g_arena;
@@ -497,4 +497,25 @@ void game_frame(void) {
                       sse_max(-250.0f, cy));
     render_frame();
     platform_present();
+}
+
+// Test mode: text dump of simulation state (same format as tools/oracle)
+void game_debug_dump(const char *path) {
+    FILE *f = fopen(path, "w");
+    if (!f) return;
+    fprintf(f, "rng %016llx %016llx %016llx %016llx\n", (unsigned long long)g_rng.s[0], (unsigned long long)g_rng.s[1],
+            (unsigned long long)g_rng.s[2], (unsigned long long)g_rng.s[3]);
+    for (u32 i = 0; i < g_bee_count; i++) {
+        Nest *n = &g_bees[i];
+        fprintf(f, "nest %u %u t=%.6f n=%u", n->pos.x, n->pos.y, n->timer, n->count);
+        for (u32 k = 0; k < n->count && k < 3; k++)
+            fprintf(f, " [%.4f %.4f %u %.3f]", n->p[k].x, n->p[k].y, n->p[k].item, n->p[k].life);
+        fprintf(f, "\n");
+    }
+    for (u32 i = 0; i < g_flock.gulls.count; i++) {
+        Seagull *g = &g_flock.gulls.data[i];
+        fprintf(f, "gull %.6f %.6f st=%u\n", g->pos.x, g->pos.y, g->state);
+    }
+    fprintf(f, "orders %u pickups %u\n", g_flock.orders.count, g_pickups.count);
+    fclose(f);
 }

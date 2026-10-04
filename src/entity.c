@@ -3,9 +3,9 @@
 #include "game.h"
 
 EntityPool g_entity_pool;
-DARRAY(u32) g_free_slots;
-DARRAY(Entity *) g_entities;
-DARRAY(Entity *) g_entity_list;
+U32Array g_free_slots;
+EntityPtrArray g_entities;
+EntityPtrArray g_entity_list;
 u64 g_next_serial = 1;
 
 MapSize g_map;
@@ -270,6 +270,6 @@ b32 cell_buildable(V2u pos, u32 layer) {
         if (g_ent_grid[grid_index(pos.x, pos.y, layer)] != 0) return 0;
     }
     if (t == TILE_GRASS || t == TILE_5) return 1;
-    if (t == TILE_IRON || t == TILE_COPPER || t == TILE_URANIUM) return layer != 0;
+    if (t == TILE_IRON || t == TILE_COPPER || t == TILE_FLOWERS) return layer != 0;
     return 0;
 }

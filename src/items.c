@@ -1,7 +1,7 @@
 // Inventory, build costs and buying seagulls.
 #include "game.h"
 
-DARRAY(u32) g_items;
+U32Array g_items;
 BuildCost g_build_costs[12];
 CostList g_seagull_cost = {{{ITEM_HONEY, {0}, 0}, {ITEM_HONEY, {0}, 0}, {ITEM_HONEY, {0}, 0}, {ITEM_HONEY, {0}, 0}}, 0};
 static b32 g_costs_ready;  // 0x14004a9e8

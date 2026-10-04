@@ -10,7 +10,7 @@ typedef struct WorldGen {
     u8 clear[0x10000];
 } WorldGen;
 
-typedef DARRAY(Home) ZoneList;  // reserved areas around homes, same layout as Home
+typedef HomeArray ZoneList;  // reserved areas around homes, same layout as Home
 
 static inline b32 in_map(u32 x, u32 y) { return x < g_map.w && y < g_map.h; }
 static inline void set_tile(u32 x, u32 y, u8 t) { if (in_map(x, y)) g_tiles[y * g_map.w + x] = t; }

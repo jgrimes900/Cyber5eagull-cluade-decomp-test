@@ -2,7 +2,7 @@
 // and the per-frame simulation tick that reacts to flock events.
 #include "game.h"
 
-DARRAY(Pickup) g_pickups;   // 0x1400eaa08
+PickupArray g_pickups;   // 0x1400eaa08
 u16 g_ore_iron[0x10000];    // 0x14004a9f0
 u16 g_ore_copper[0x10000];  // 0x14006a9f0
 u16 g_ore_flowers[0x10000]; // 0x14008a9f0

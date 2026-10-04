@@ -191,7 +191,7 @@ EntityDef conveyor_def(i32 out, i32 in) {
     u8 ib = in == 0 ? 0x40 : in == 1 ? 0x80 : in == 2 ? 0x10 : in == 3 ? 0x20 : 0;
     set_port(&d, 0, 0, 0, ib | ob);
     d.recipes = (RecipeList *)&g_recipes_conveyor;
-    static const u32 k_spr[4][4] = {
+    static const u64 k_spr[4][4] = {
         {0, 0x1400ead00, 0x1400ead20, 0x1400ead40},
         {0x1400ead60, 0, 0x1400ead80, 0x1400eada0},
         {0x1400eade0, 0x1400eae00, 0, 0x1400eadc0},
@@ -242,7 +242,7 @@ static EntityDef assembler_def(i32 rot) {
     EntityDef d = def_blank(4);
     d.w = 3;
     d.h = 2;
-    static const u32 k_spr[4][2] = {{0x1400eb580, 0x1400eb5a0},
+    static const u64 k_spr[4][2] = {{0x1400eb580, 0x1400eb5a0},
                                     {0x1400eb600, 0x1400eb620},
                                     {0x1400eb5c0, 0x1400eb5e0},
                                     {0x1400eb640, 0x1400eb660}};
@@ -279,7 +279,7 @@ EntityDef building_def(u32 kind, i32 rot) {
     case 3: {  // 2x2 machine
         d.w = 2;
         d.h = 2;
-        static const u32 k_spr[4][2] = {{0x1400eb220, 0x1400eb240},
+        static const u64 k_spr[4][2] = {{0x1400eb220, 0x1400eb240},
                                         {0x1400eb2a0, 0x1400eb2c0},
                                         {0x1400eb260, 0x1400eb280},
                                         {0x1400eb2e0, 0x1400eb300}};
@@ -309,7 +309,7 @@ EntityDef building_def(u32 kind, i32 rot) {
         set_port(&d, 0, 0, 0, 0xf);
         break;
     case 9: {
-        static const u32 k_spr[4] = {0x1400eae80, 0x1400eae60, 0x1400eaec0, 0x1400eaea0};
+        static const u64 k_spr[4] = {0x1400eae80, 0x1400eae60, 0x1400eaec0, 0x1400eaea0};
         if (rot >= 0 && rot < 4) d.sprite = SPR(k_spr[rot]);
         d.recipes = (RecipeList *)&g_recipes_conveyor;
         d.ports[0] = rotate_port(port(0, 0, 0x20), v2u_make(1, 1), rot);
@@ -610,16 +610,16 @@ static const Sprite *preview_sprite(u8 id, u32 rot) {
     case 1:
         return NULL;
     case 10: {
-        static const u32 k[4] = {0x1400eaca0, 0x1400ead00, 0x1400eadc0, 0x1400ead60};
+        static const u64 k[4] = {0x1400eaca0, 0x1400ead00, 0x1400eadc0, 0x1400ead60};
         return SPR(k[rot < 4 ? rot : 0]);
     }
     case 11: return SPR(0x1400eb680);
     case 12: {
-        static const u32 k[4] = {0x1400eb220, 0x1400eb2a0, 0x1400eb260, 0x1400eb2e0};
+        static const u64 k[4] = {0x1400eb220, 0x1400eb2a0, 0x1400eb260, 0x1400eb2e0};
         return SPR(k[rot < 4 ? rot : 0]);
     }
     case 13: {
-        static const u32 k[4] = {0x1400eb580, 0x1400eb600, 0x1400eb5c0, 0x1400eb640};
+        static const u64 k[4] = {0x1400eb580, 0x1400eb600, 0x1400eb5c0, 0x1400eb640};
         return SPR(k[rot < 4 ? rot : 0]);
     }
     case 14: return SPR(0x1400eabe0);
@@ -627,7 +627,7 @@ static const Sprite *preview_sprite(u8 id, u32 rot) {
     case 16: return SPR(0x1400eae40);
     case 17: return SPR(0x1400eae20);
     case 18: {
-        static const u32 k[4] = {0x1400eae80, 0x1400eae60, 0x1400eaec0, 0x1400eaea0};
+        static const u64 k[4] = {0x1400eae80, 0x1400eae60, 0x1400eaec0, 0x1400eaea0};
         return SPR(k[rot < 4 ? rot : 0]);
     }
     case 19: return SPR(0x1400eb6c0);

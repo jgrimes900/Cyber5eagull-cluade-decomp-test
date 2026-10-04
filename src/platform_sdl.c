@@ -15,8 +15,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-u32 *g_backbuffer;
-i32 g_bb_w, g_bb_h;
 u8 g_key_down[256];
 u8 g_mouse_down[6];
 b32 g_quit;
@@ -40,7 +38,7 @@ static const char *s_out_dir;
 static int s_frame;
 static u64 s_qpc;
 static u64 s_rand_state = 0x1234567887654321ull;
-static V2i s_cursor;
+static V2i s_cursor = {480, 270};  // matches the oracle harness default
 #define TEST_QPC_FREQ 10000000ull
 
 static void alloc_backbuffer(i32 w, i32 h) {
@@ -237,6 +235,12 @@ static void dump_frame(void) {
 void platform_present(void) {
     if (s_test) {
         if (script_frame_has(s_script, s_frame, 'D')) dump_frame();
+        if (script_frame_has(s_script, s_frame, 'S')) {
+            extern void game_debug_dump(const char *path);
+            char p[512];
+            snprintf(p, sizeof p, "%s/state_%05d.txt", s_out_dir, s_frame);
+            game_debug_dump(p);
+        }
         s_frame++;
         s_qpc += TEST_QPC_FREQ / 60;
         return;

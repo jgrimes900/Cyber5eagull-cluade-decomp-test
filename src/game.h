@@ -24,6 +24,10 @@ typedef struct Sprite {
     i32 unused;   // 0x1c (never meaningfully written by the original)
 } Sprite;
 
+typedef DARRAY(u32) U32Array;
+typedef DARRAY(u8) U8Array;
+typedef DARRAY(const Sprite *) SpritePtrArray;
+
 extern u32 *g_backbuffer;
 extern i32 g_bb_w, g_bb_h;
 
@@ -46,9 +50,12 @@ V2 dir_from_turns(f32 turns);
 typedef struct { u64 s[4]; } Rng;
 extern Rng g_rng;
 static inline u64 rotl64(u64 x, int k) { return (x << k) | (x >> (64 - k)); }
+// The original's xoshiro256++ output step uses (x << 23) | (x >> 31) where the
+// reference algorithm has rotl(x, 23); kept so the random sequence matches.
+static inline u64 rng_mix23(u64 x) { return x << 23 | x >> 31; }
 static inline u64 rng_next(Rng *r) {
     u64 *s = r->s;
-    u64 result = rotl64(s[0] + s[3], 23) + s[0];
+    u64 result = rng_mix23(s[0] + s[3]) + s[0];
     u64 t = s[1] << 17;
     s[2] ^= s[0];
     s[3] ^= s[1];
@@ -98,7 +105,7 @@ typedef DARRAY(Recipe *) RecipeList;
 // A building's selectable recipes plus the icons shown in the recipe picker
 typedef struct RecipeBook {
     RecipeList list;                  // 0x00
-    DARRAY(const Sprite *) icons;     // 0x18
+    SpritePtrArray icons;     // 0x18
 } RecipeBook;
 extern RecipeBook g_recipes_conveyor;   // 0x1400eba70 (single pass-through recipe)
 extern RecipeBook g_recipes_furnace;    // 0x1400ebaa0
@@ -145,13 +152,14 @@ typedef struct Entity {           // 0x168 bytes
 _Static_assert(sizeof(Entity) == 0x168, "Entity");
 
 typedef struct { Entity *e; u64 serial; } EntityHandle;
+typedef DARRAY(Entity *) EntityPtrArray;
 static inline b32 handle_valid(EntityHandle h) { return h.e && h.e->serial && h.e->serial == h.serial; }
 
 typedef struct EntityPool { Arena *arena; Entity *free_list; } EntityPool;
 extern EntityPool g_entity_pool;                 // 0x14002a838
-extern DARRAY(u32) g_free_slots;                 // 0x14002a848
-extern DARRAY(Entity *) g_entities;              // 0x14002a860 (slot 0 is always NULL)
-extern DARRAY(Entity *) g_entity_list;           // 0x14002a878
+extern U32Array g_free_slots;                 // 0x14002a848
+extern EntityPtrArray g_entities;              // 0x14002a860 (slot 0 is always NULL)
+extern EntityPtrArray g_entity_list;           // 0x14002a878
 extern u64 g_next_serial;                        // 0x140029140
 
 Entity *entity_at(V2u pos, u32 layer);           // 0x140009990
@@ -276,7 +284,7 @@ typedef struct BuildCost {        // 0x30
 } BuildCost;
 typedef struct CostList { ItemStack s[4]; u32 n; } CostList;
 
-extern DARRAY(u32) g_items;        // 0x140029a20 inventory counts per item
+extern U32Array g_items;        // 0x140029a20 inventory counts per item
 extern BuildCost g_build_costs[12];// 0x140029290
 extern CostList g_seagull_cost;    // 0x1400294d0
 
@@ -310,8 +318,9 @@ static inline V2u v2u_make(u32 x, u32 y) { V2u r = {x, y}; return r; }
 
 // Homes ("hives") where seagulls live
 typedef struct Home { V2u pos; u32 big; } Home;
-extern DARRAY(Home) g_homes;       // 0x14002a9c8
-extern DARRAY(u32) g_home_flags;   // 0x1400ea9f0
+typedef DARRAY(Home) HomeArray;
+extern HomeArray g_homes;       // 0x14002a9c8
+extern U32Array g_home_flags;   // 0x1400ea9f0
 
 // Sounds: mono float samples (first channel of a 16-bit PCM wav, pre-scaled by volume)
 typedef struct Sound {
@@ -341,7 +350,8 @@ typedef struct Pickup {          // 0x18
     u8 take;
     u8 pad2[3];
 } Pickup;
-extern DARRAY(Pickup) g_pickups;
+typedef DARRAY(Pickup) PickupArray;
+extern PickupArray g_pickups;
 extern u16 g_ore_iron[0x10000], g_ore_copper[0x10000], g_ore_flowers[0x10000];
 
 void pickup_remove(u32 i);
@@ -359,12 +369,12 @@ void jobs_tick(f32 dt);
 // Sprites in the tileset (0x1400eaa20 ..) and other loaded art
 extern Image g_tileset;                  // 0x140029890
 extern Sprite g_spr[104];                // 0x1400eaa20, indexed by (address - 0x1400eaa20) / 0x20
-#define SPR(addr) (&g_spr[((addr) - 0x1400eaa20u) / 0x20])
+#define SPR(addr) (&g_spr[((u64)(addr) - 0x1400eaa20ull) / 0x20])
 #define g_spr_digits SPR(0x1400eaee0)
 extern const Sprite *g_tile_sprites[9];  // 0x140029a40
 extern const Sprite *g_item_sprites[14]; // 0x1400299b0
 extern Image g_tooltips[26];             // 0x1400eb720
-#define TOOLTIP(addr) (&g_tooltips[((addr) - 0x1400eb720u) / 0x10])
+#define TOOLTIP(addr) (&g_tooltips[((u64)(addr) - 0x1400eb720ull) / 0x10])
 // 0x1400298c0: nine tutorial pages followed directly by the controls image
 // (0x140029950); the original indexes past the pages, so keep them together.
 extern Image g_tutorial[10];
@@ -399,7 +409,7 @@ void draw_entities(i32 zoom, u32 layer);
 typedef struct MenuEntry { u8 is_spawn; u8 id; } MenuEntry;
 extern MenuEntry g_menu[12];            // 0x140029058 build menu slots (keys 1..0,-,=)
 extern u8 g_palette_ids[22];            // 0x140029028 ids shown in the full palette
-extern DARRAY(const Sprite *) g_palette_sprites;  // 0x140029640
+extern SpritePtrArray g_palette_sprites;  // 0x140029640
 extern u8 g_selected_id;                // 0x14002962c building/tool selected for placing
 extern i32 g_palette_index;             // 0x140029658
 extern u32 g_palette_open;              // 0x14002965c
@@ -407,7 +417,7 @@ extern u32 g_place_paid;                // 0x140029660 1: sandbox placement (fre
 extern u32 g_rotation;                  // 0x140029664
 extern u8 g_selected_item;              // 0x140029024 item chosen for delivery (ITEM_NONE = none)
 extern u8 g_inv_next_row;               // 0x140029025
-extern DARRAY(u8) g_inv_rows;           // 0x140029558 display row per item (0xff = not shown yet)
+extern U8Array g_inv_rows;           // 0x140029558 display row per item (0xff = not shown yet)
 extern u32 g_menu_open;                 // 0x1400298ac
 extern u32 g_drag_camera;               // 0x1400296ec
 extern u32 g_click_consumed;            // 0x1400296f8
@@ -425,7 +435,7 @@ extern V2i g_picker_anchor;             // 0x140029af8
 extern i32 g_picker_selected;           // 0x140029128
 extern Entity *g_picker_entity;         // 0x14002a890
 extern u64 g_picker_serial;             // 0x14002a898
-extern DARRAY(const Sprite *) g_picker_icons; // 0x140029ad0
+extern SpritePtrArray g_picker_icons; // 0x140029ad0
 typedef void (*PickerFn)(u32 index);
 extern PickerFn g_picker_fn;            // 0x140029ae8
 
@@ -506,3 +516,4 @@ void new_game(V2u start);
 void entities_update(f32 dt);
 b32 game_init(void);
 void game_frame(void);
+extern f32 g_honey_timer;      // 0x14004a9e4

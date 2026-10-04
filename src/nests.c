@@ -54,11 +54,11 @@ void nests_update(f32 dt) {
                 u64 r2 = rng_next(&g_rng);
                 // the original also peeks two values ahead without storing the state
                 u64 *s = g_rng.s;
-                u64 r3 = rotl64(s[0] + s[3], 23) + s[0];
+                u64 r3 = rng_mix23(s[0] + s[3]) + s[0];
                 u64 tt = s[3] ^ s[1];
                 u64 s0b = tt ^ s[0];
                 u64 s3b = rotl64(tt, 45);
-                u64 r4 = rotl64(s3b + s0b, 23) + s0b;
+                u64 r4 = rng_mix23(s3b + s0b) + s0b;
                 NestItem *p = &n->p[n->count];
                 p->x = ((f32)n->pos.x + (f32)(r3 % 1000) / 1000.0f) - 0.5f;
                 p->y = ((f32)n->pos.y + (f32)(r4 % 1000) / 1000.0f) - 0.5f;
