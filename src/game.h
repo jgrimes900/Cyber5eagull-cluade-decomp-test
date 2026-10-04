@@ -95,6 +95,15 @@ typedef struct PACKED Port {
 
 typedef struct Recipe Recipe;
 typedef DARRAY(Recipe *) RecipeList;
+// A building's selectable recipes plus the icons shown in the recipe picker
+typedef struct RecipeBook {
+    RecipeList list;                  // 0x00
+    DARRAY(const Sprite *) icons;     // 0x18
+} RecipeBook;
+extern RecipeBook g_recipes_conveyor;   // 0x1400eba70 (single pass-through recipe)
+extern RecipeBook g_recipes_furnace;    // 0x1400ebaa0
+extern RecipeBook g_recipes_machine;    // 0x1400ebad0
+extern RecipeBook g_recipes_assembler;  // 0x1400ebb00
 
 typedef struct EntityDef {        // 0x78 bytes
     i32 type;                     // 0x00
@@ -246,7 +255,7 @@ void flock_assign_orders(Flock *f);
 void flock_update(Flock *f, f32 dt);
 void flock_emit_event(Flock *f, u8 type, u32 seagull, const void *order32);
 HomeTarget *nearest_home(HomeTarget *out, V2u cell);
-f32 home_distance_score(V2 p);
+f32 home_distance_score(V2u c);
 
 // ---------------------------------------------------------------------------
 // Items, inventory and build costs
@@ -304,11 +313,20 @@ typedef struct Home { V2u pos; u32 big; } Home;
 extern DARRAY(Home) g_homes;       // 0x14002a9c8
 extern DARRAY(u32) g_home_flags;   // 0x1400ea9f0
 
-// Sounds
-typedef struct Sound Sound;
+// Sounds: mono float samples (first channel of a 16-bit PCM wav, pre-scaled by volume)
+typedef struct Sound {
+    f32 *samples;     // 0x00
+    u32 count;        // 0x08
+    u32 rate;         // 0x0c
+    f64 duration;     // 0x10 seconds
+} Sound;
 extern Sound g_snd_squawk;         // 0x14002a8c0 (bees.wav)
 extern Sound g_snd_pickaxe;        // 0x14002a8d8 (pickaxe.wav)
 void play_sound(Sound *s, f32 volume);
+b32 sound_load(Sound *s, const char *path, f32 volume);
+b32 audio_start(void);
+void audio_stop(void);
+b32 assets_load(void);
 f64 time_now(void);
 u32 rdrand32(void);
 u64 rdrand64(void);
@@ -347,8 +365,10 @@ extern const Sprite *g_tile_sprites[9];  // 0x140029a40
 extern const Sprite *g_item_sprites[14]; // 0x1400299b0
 extern Image g_tooltips[26];             // 0x1400eb720
 #define TOOLTIP(addr) (&g_tooltips[((addr) - 0x1400eb720u) / 0x10])
-extern Image g_tutorial[9];              // 0x1400298c0
-extern Image g_controls_img;             // 0x140029950
+// 0x1400298c0: nine tutorial pages followed directly by the controls image
+// (0x140029950); the original indexes past the pages, so keep them together.
+extern Image g_tutorial[10];
+#define g_controls_img (g_tutorial[9])
 extern Image g_win_img;                  // 0x140029960
 
 // ---------------------------------------------------------------------------
@@ -383,7 +403,7 @@ extern DARRAY(const Sprite *) g_palette_sprites;  // 0x140029640
 extern u8 g_selected_id;                // 0x14002962c building/tool selected for placing
 extern i32 g_palette_index;             // 0x140029658
 extern u32 g_palette_open;              // 0x14002965c
-extern u32 g_place_paid;                // 0x140029660 1: placement costs items
+extern u32 g_place_paid;                // 0x140029660 1: sandbox placement (free, chosen from the palette)
 extern u32 g_rotation;                  // 0x140029664
 extern u8 g_selected_item;              // 0x140029024 item chosen for delivery (ITEM_NONE = none)
 extern u8 g_inv_next_row;               // 0x140029025
@@ -433,3 +453,56 @@ void picker_open_for(Entity *e);
 void picker_choose(u32 index);
 i32 entity_recipe_index(Entity *e);
 void menu_activate(u32 slot);
+
+// ---------------------------------------------------------------------------
+// Cross-module functions
+// entity.c
+void entity_configure(Entity *e, const EntityDef *def);
+EntityHandle entity_create(V2u pos, u32 layer, const EntityDef *def);
+void entity_destroy(Entity *e);
+void entity_refresh_connections(Entity *e);
+b32 cell_buildable(V2u pos, u32 layer);
+// worldgen.c
+void world_generate(u32 *seed_out, void *zones, V2u start);
+b32 home_in_range(V2u c, const Home *h, u32 r);
+b32 near_any_home(V2u c);
+// nests.c
+void nest_add(V2u p);
+void nest_remove(V2u p);
+void nest_sync(V2u p);
+void nests_update(f32 dt);
+// orders.c
+b32 find_path(V2u from, V2u to, V2u *out, u32 *count, u32 max, void *user);
+b32 can_harvest(V2u c);
+i32 order_add(Flock *f, const Order *src);
+void order_harvest(V2u c);
+b32 order_take_from_conveyor(V2u c, u32 max);
+b32 order_deliver(V2u c, u8 item, u32 count);
+// seagull.c
+void flock_reset(Flock *f, u32 n, V2u start, f32 speed, Arena *arena);
+// place.c
+b32 in_home(V2u c);
+void home_remove_at(V2u c);
+void demolish_area(V2u at, u32 layer, V2u size);
+void demolish_at(V2u c, u32 layer);
+void cancel_orders_in(V2u at, V2u size);
+EntityDef conveyor_def(i32 out, i32 in);
+EntityDef building_def(u32 kind, i32 rot);
+b32 set_conveyor(V2u c, u32 layer, i32 out, i32 in);
+void apply_tool(u8 id, V2u c, u32 layer, u32 rotation, b32 paid_mode);
+void use_tool(u8 id);
+b32 world_blocked(V2 p, V2u a, V2u b, void *user);
+// ui.c
+b32 menu_contains(V2 m);
+b32 palette_click(V2 m);
+// input.c
+void on_key(u32 vk, b32 down);
+void on_mouse(i32 button, b32 down, f32 wheel);
+void frame_input(void);
+// game.c
+extern u32 g_world_seed;
+void set_ore_amount(V2u c);
+void new_game(V2u start);
+void entities_update(f32 dt);
+b32 game_init(void);
+void game_frame(void);

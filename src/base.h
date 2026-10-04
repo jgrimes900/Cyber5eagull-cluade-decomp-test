@@ -78,3 +78,6 @@ void da_grow_(void *arr, u64 elem_size, u64 align);
     do { if ((arr)->count == (arr)->cap) da_grow_((arr), sizeof(*(arr)->data), (align)); } while (0)
 #define da_push(arr, value, align) \
     do { da_reserve_one(arr, align); (arr)->data[(arr)->count++] = (value); } while (0)
+// Set the element count, growing the block to exactly `count` if needed (new elements zeroed)
+void da_resize_(void *arr, u32 count, u64 elem_size, u64 align);
+#define da_resize(arr, n, align) da_resize_((arr), (n), sizeof(*(arr)->data), (align))

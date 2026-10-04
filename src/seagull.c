@@ -57,9 +57,9 @@ static Seagull *seagull_init(Seagull *s, V2u home, V2 off, f32 speed) {
     return s;
 }
 
-static void seagull_push(Flock *f, V2u home, V2 off) {
+static void seagull_push_(Flock *f, V2u home, V2 off, f32 speed, b32 assign) {
     Seagull tmp;
-    seagull_init(&tmp, home, off, f->speed);
+    seagull_init(&tmp, home, off, speed);
     da_reserve_one(&f->gulls, 4);
     memcpy(&f->gulls.data[f->gulls.count++], &tmp, sizeof tmp);
     u32 n = f->gulls.count;
@@ -67,7 +67,25 @@ static void seagull_push(Flock *f, V2u home, V2 off) {
     s->phase = (f32)((n * 0xad - 0xad) & 0x3ff) * 0.0009765625f + s->phase;
     s->rnd1 = (f32)(hash_mix(home.x * 0x85ebca6bu ^ home.y * 0xc2b2ae35u ^ n * 0x9e3779b9u) & 0xffff) * 1.5259022e-05f;
     s->rnd2 = (f32)(hash_mix(n * 0x27d4eb2fu ^ home.y * 0xd3a2646cu ^ home.x * 0x165667b1u) & 0xffff) * 1.5259022e-05f;
-    flock_assign_orders(f);
+    if (assign) flock_assign_orders(f);
+}
+
+static void seagull_push(Flock *f, V2u home, V2 off) { seagull_push_(f, home, off, f->speed, 1); }
+
+// 0x14000b8c0: reset the flock to `n` seagulls at `start`
+void flock_reset(Flock *f, u32 n, V2u start, f32 speed, Arena *arena) {
+    if (!arena) arena = &g_arena;
+    f->f00 = (u64)(uintptr_t)arena;
+    f->gulls.arena = arena;
+    f->orders.arena = arena;
+    f->events.arena = arena;
+    f->gulls.count = 0;
+    f->orders.count = 0;
+    f->events.count = 0;
+    f->default_home.cell = start;
+    f->default_home.off = v2(0.5f, 0.5f);
+    f->speed = speed;
+    for (u32 i = 0; i < n; i++) seagull_push_(f, start, f->default_home.off, f->speed, 0);
 }
 
 // 0x140002060
@@ -76,9 +94,7 @@ void flock_spawn_at(Flock *f, V2u cell, V2 off) { seagull_push(f, cell, off); }
 void flock_spawn_default(Flock *f) { seagull_push(f, f->default_home.cell, f->default_home.off); }
 
 // 0x140002310: distance from a cell to the first home, times three
-f32 home_distance_score(V2 p_bits) {
-    V2u c;
-    memcpy(&c, &p_bits, sizeof c);
+f32 home_distance_score(V2u c) {
     if (g_homes.count == 0) TRAP();
     V2u h = g_homes.data[0].pos;
     f32 dy = u2f(c.y) - u2f(h.y);

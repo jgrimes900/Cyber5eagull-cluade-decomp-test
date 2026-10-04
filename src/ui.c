@@ -773,3 +773,38 @@ void draw_home_range(const Home *h, V2 cam, i32 zoom) {
         }
     }
 }
+
+// Right-click outside the open build menu closes it (part of 0x1400107d0)
+b32 menu_contains(V2 m) {
+    MenuLayout L = menu_layout();
+    i32 mx = (i32)m.x, my = (i32)m.y;
+    return !(mx < L.x || L.x + L.w <= mx || my < k_menu_margin ||
+             (i32)(k_menu_margin + L.rows * L.cell + k_menu_border * 2) <= my);
+}
+
+// Left click while the full palette is open (part of 0x1400107d0)
+b32 palette_click(V2 m) {
+    i32 cell = MAX(k_menu_scale * k_menu_icon, 1);
+    i32 c = (g_bb_w + (k_menu_margin + k_menu_border) * -2) / cell;
+    u32 cols = (u32)MAX(c, 1);
+    u32 rows = (u32)((22 % cols) != 0) + 22 / cols;
+    i32 px = MAX(((g_bb_w + k_menu_border * -2) - (i32)cols * cell) - k_menu_margin, 0);
+    i32 ry = ((i32)m.y - k_menu_margin) - k_menu_border;
+    i32 rx = ((i32)m.x - px) - k_menu_border;
+    if (rx < 0 || (i32)cols * cell <= rx || ry < 0 || (i32)(MAX(rows, 1u) * (u32)cell) <= ry) return 0;
+    u32 idx = (u32)((ry / cell) * (i32)cols + rx / cell);
+    if ((i32)idx < 0 || idx > 21) return 1;
+    u8 id = g_palette_ids[idx];
+    u8 sel = g_selected_id == id ? 0 : id;
+    u32 i = 0;
+    for (; i < 22; i++)
+        if (g_palette_ids[i] == id) {
+            g_palette_index = (i32)i;
+            break;
+        }
+    g_selected_id = sel;
+    g_palette_open = 0;
+    g_place_paid = 1;
+    g_rotation = 0;
+    return 1;
+}
